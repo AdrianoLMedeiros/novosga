@@ -122,14 +122,28 @@ Acesse: `http://127.0.0.1:8000` → redireciona para `/login`.
 
 Cada bundle de módulo é montado sob um prefixo derivado do namespace (ver `src/Loader/RouterLoader.php`):
 
-| Módulo | Prefixo de rota |
-|---|---|
-| Triagem (auto-atendimento) | `/novosga.triage/` |
-| Atendimento (guichê) | depende do `attendance-bundle` |
-| Painel | depende do `panel-bundle` |
-| Admin (nativo, não é módulo) | `/admin` |
+| Papel | Bundle | Incluso no `composer.json`? | Prefixo de rota |
+|---|---|---|---|
+| Totem/auto-atendimento (público escolhe serviço) | `triage-bundle` | ✅ Sim | `/novosga.triage/` |
+| Atendente (chamar/atender senha no guichê) | `attendance-bundle` | ✅ Sim | `/novosga.attendance/` |
+| Monitor/supervisão (acompanhar fila, transferir senhas) | `monitor-bundle` | ✅ Sim | `/novosga.monitor/` |
+| Painel de TV (exibição pública da senha chamada) | `panel-bundle` | ❌ **Não incluso** — ver limitação abaixo | — |
+| Admin (nativo, não é módulo) | — | — | `/admin` |
 
 Exemplo: `http://127.0.0.1:8000/novosga.triage/`
+
+#### ⚠️ Limitação conhecida: painel de TV (`panel-bundle`) não pode ser instalado sem atualizar o Symfony
+
+O `novosga/panel-bundle` (que mostra a senha chamada em telas de TV nos guichês/salas) **não está nas dependências deste projeto** e, ao tentar adicioná-lo, o Composer falha:
+
+```
+novosga/panel-bundle v2.3.x-dev requires symfony/form 7.4.* -> conflicts with root composer.json (7.1.*)
+novosga/core v2.3.x-dev requires symfony/http-kernel 7.4.* -> conflicts
+```
+
+A causa raiz: este `composer.json` fixa **mais de 25 pacotes Symfony** em `7.1.*`, enquanto a branch `2.3.x-dev` do `novosga/core` (dependência transitiva de quase todos os bundles) já exige Symfony `7.4.*`. Ou seja, o ecossistema de bundles avançou para 7.4 e este backend ainda não.
+
+Resolver isso exige uma **atualização de framework em escala** (editar todas as constraints `7.1.*` → `7.4.*` neste `composer.json`, rodar `composer update -W` e validar toda a aplicação contra possíveis breaking changes do Symfony 7.1→7.4), não um simples `composer require`. Foi deliberadamente deixado como tarefa separada, a ser planejada e testada com mais cuidado (suíte de testes completa, revisão de changelog do Symfony) antes de ser executada.
 
 > A tela de Triagem só mostra serviços se houver `Servico` + `ServicoUnidade` cadastrados para a unidade do usuário logado. Recém-instalado, ela aparecerá vazia — é esperado.
 
